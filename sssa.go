@@ -22,17 +22,17 @@ var (
 	ErrOneOfTheSharesIsInvalid = errors.New("one of the shares is invalid")
 )
 
-type SSSAGenerator interface {
+type SSSAEngine interface {
 	Create(minimum int, shares int, raw string) ([]string, error)
 	Combine(shares []string) (string, error)
 	IsValidShare(candidate string) bool
 }
 
-type DefaultSSSAGenerator struct {
+type DefaultSSSAEngine struct {
 	Prime *big.Int
 }
 
-func NewDefaultSSSAGenerator(prime string) (*DefaultSSSAGenerator, error) {
+func NewDefaultSSSAEngine(prime string) (*DefaultSSSAEngine, error) {
 	if prime == "" {
 		prime = DefaultPrimeStr
 	}
@@ -42,7 +42,7 @@ func NewDefaultSSSAGenerator(prime string) (*DefaultSSSAGenerator, error) {
 		return nil, ErrCannotParsePrime
 	}
 
-	return &DefaultSSSAGenerator{Prime: p}, nil
+	return &DefaultSSSAEngine{Prime: p}, nil
 }
 
 /**
@@ -50,7 +50,7 @@ func NewDefaultSSSAGenerator(prime string) (*DefaultSSSAGenerator, error) {
  * created by Shamir's Secret Sharing Algorithm requring a minimum number of
  * share to recreate, of length shares, from the input secret raw as a string
 **/
-func (g *DefaultSSSAGenerator) Create(minimum int, shares int, raw string) ([]string, error) {
+func (e *DefaultSSSAEngine) Create(minimum int, shares int, raw string) ([]string, error) {
 	// Verify minimum isn't greater than shares; there is no way to recreate
 	// the original polynomial in our current setup, therefore it doesn't make
 	// sense to generate fewer shares than are needed to reconstruct the secret.
@@ -79,9 +79,9 @@ func (g *DefaultSSSAGenerator) Create(minimum int, shares int, raw string) ([]st
 
 		for j := range polynomial[i][1:] {
 			// Each coefficient should be unique
-			number := random(g.Prime)
+			number := random(e.Prime)
 			for inNumbers(numbers, number) {
-				number = random(g.Prime)
+				number = random(e.Prime)
 			}
 			numbers = append(numbers, number)
 
@@ -109,9 +109,9 @@ func (g *DefaultSSSAGenerator) Create(minimum int, shares int, raw string) ([]st
 			secrets[i][j] = make([]*big.Int, 2)
 
 			// ...generate a new x-coordinate...
-			number := random(g.Prime)
+			number := random(e.Prime)
 			for inNumbers(numbers, number) {
-				number = random(g.Prime)
+				number = random(e.Prime)
 			}
 			numbers = append(numbers, number)
 
@@ -120,7 +120,7 @@ func (g *DefaultSSSAGenerator) Create(minimum int, shares int, raw string) ([]st
 			secrets[i][j][1] = evaluatePolynomial(
 				polynomial[j],
 				number,
-				g.Prime,
+				e.Prime,
 			)
 
 			// ...add it to results...
@@ -142,7 +142,7 @@ func (g *DefaultSSSAGenerator) Create(minimum int, shares int, raw string) ([]st
  *       or more are passed to this function. Passing thus does not affect it
  *       Passing fewer however, simply means that the returned secret is wrong.
 **/
-func (g *DefaultSSSAGenerator) Combine(shares []string) (string, error) {
+func (e *DefaultSSSAEngine) Combine(shares []string) (string, error) {
 	// Recreate the original object of x, y points, based upon number of shares
 	// and size of each share (number of parts in the secret).
 	var secrets [][][]*big.Int = make([][][]*big.Int, len(shares))
@@ -150,7 +150,7 @@ func (g *DefaultSSSAGenerator) Combine(shares []string) (string, error) {
 	// For each share...
 	for i := range shares {
 		// ...ensure that it is valid...
-		if g.IsValidShare(shares[i]) == false {
+		if e.IsValidShare(shares[i]) == false {
 			return "", ErrOneOfTheSharesIsInvalid
 		}
 
@@ -192,10 +192,10 @@ func (g *DefaultSSSAGenerator) Combine(shares []string) (string, error) {
 					added = added.Sub(origin, current)
 
 					numerator = numerator.Mul(numerator, negative)
-					numerator = numerator.Mod(numerator, g.Prime)
+					numerator = numerator.Mod(numerator, e.Prime)
 
 					denominator = denominator.Mul(denominator, added)
-					denominator = denominator.Mod(denominator, g.Prime)
+					denominator = denominator.Mod(denominator, e.Prime)
 				}
 			}
 
@@ -203,11 +203,11 @@ func (g *DefaultSSSAGenerator) Combine(shares []string) (string, error) {
 			// ...multiply together the points (y)(numerator)(denominator)^-1...
 			working := big.NewInt(0).Set(originy)
 			working = working.Mul(working, numerator)
-			working = working.Mul(working, modInverse(denominator, g.Prime))
+			working = working.Mul(working, modInverse(denominator, e.Prime))
 
 			// LPI sum
 			secret[j] = secret[j].Add(secret[j], working)
-			secret[j] = secret[j].Mod(secret[j], g.Prime)
+			secret[j] = secret[j].Mod(secret[j], e.Prime)
 		}
 	}
 
@@ -224,7 +224,7 @@ func (g *DefaultSSSAGenerator) Combine(shares []string) (string, error) {
  *
  * Returns only success/failure (bool)
 **/
-func (g *DefaultSSSAGenerator) IsValidShare(candidate string) bool {
+func (e *DefaultSSSAEngine) IsValidShare(candidate string) bool {
 	if len(candidate)%88 != 0 {
 		return false
 	}
@@ -233,7 +233,7 @@ func (g *DefaultSSSAGenerator) IsValidShare(candidate string) bool {
 	for j := 0; j < count; j++ {
 		part := candidate[j*44 : (j+1)*44]
 		decode := fromBase64(part)
-		if decode.Cmp(big.NewInt(0)) == -1 || decode.Cmp(g.Prime) == 1 {
+		if decode.Cmp(big.NewInt(0)) == -1 || decode.Cmp(e.Prime) == 1 {
 			return false
 		}
 	}

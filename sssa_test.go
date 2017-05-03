@@ -7,9 +7,9 @@ import (
 )
 
 func TestCreateCombine(t *testing.T) {
-	g, err := NewDefaultSSSAGenerator("")
+	g, err := NewDefaultSSSAEngine("")
 	if err != nil {
-		t.Fatal("Cannot NewDefaultSSSAGenerator: %s", err)
+		t.Fatal("Cannot NewDefaultSSSAEngine: %s", err)
 	}
 
 	// Short, medium, and long tests
@@ -38,9 +38,9 @@ func TestCreateCombine(t *testing.T) {
 }
 
 func TestLibraryCombine(t *testing.T) {
-	g, err := NewDefaultSSSAGenerator("")
+	g, err := NewDefaultSSSAEngine("")
 	if err != nil {
-		t.Fatal("Cannot NewDefaultSSSAGenerator: %s", err)
+		t.Fatal("Cannot NewDefaultSSSAEngine: %s", err)
 	}
 
 	shares := []string{
@@ -61,9 +61,9 @@ func TestLibraryCombine(t *testing.T) {
 }
 
 func TestIsValidShare(t *testing.T) {
-	g, err := NewDefaultSSSAGenerator("")
+	g, err := NewDefaultSSSAEngine("")
 	if err != nil {
-		t.Fatal("Cannot NewDefaultSSSAGenerator: %s", err)
+		t.Fatal("Cannot NewDefaultSSSAEngine: %s", err)
 	}
 
 	shares := []string{
